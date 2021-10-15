@@ -75,12 +75,12 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         // HMAC512는 서버만의 시크릿값이 필요
         String jwtToken = JWT.create()
                 .withSubject("cos토큰")
-                .withExpiresAt(new Date(System.currentTimeMillis()+(60000*10))) // 토큰 만료시간
+                .withExpiresAt(new Date(System.currentTimeMillis()+JwtProperties.EXPIATION_TIME)) // 토큰 만료시간
                 .withClaim("id", principalDetails.getUser().getId())
                 .withClaim("username", principalDetails.getUser().getUsername())
-                .sign(Algorithm.HMAC512("cos"));
+                .sign(Algorithm.HMAC512(JwtProperties.SECRET));
 
-        response.addHeader("Authorization", "Bearer "+jwtToken);
+        response.addHeader(JwtProperties.HEADER_STRING, JwtProperties.TOKEN_PREFIX+jwtToken);
 
     }
 }

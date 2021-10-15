@@ -1,8 +1,10 @@
 package com.cos.jwt.config;
 
 import com.cos.jwt.config.jwt.JwtAuthenticationFilter;
+import com.cos.jwt.config.jwt.JwtAuthorizationFilter;
 import com.cos.jwt.filter.MyFilter1;
 import com.cos.jwt.filter.MyFilter3;
+import com.cos.jwt.model.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,6 +23,7 @@ import org.springframework.web.filter.CorsFilter;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final CorsFilter corsFilter;
+    private final UserRepository userRepository;
 
     @Bean
     public BCryptPasswordEncoder encode(){
@@ -37,6 +40,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .formLogin().disable() // 폼태그를 이용한 로그인을 사용하지 않음
                 .httpBasic().disable() // Basic 방식 : Authorization에 ID,PW를 담는 방식, Bearer 방식 : Authorization에 token을 담는 방식
                 .addFilter(new JwtAuthenticationFilter(authenticationManager())) // AuthenticationManager
+                .addFilter(new JwtAuthorizationFilter(authenticationManager(),userRepository))
                 .authorizeRequests()
                 .antMatchers("/api/v1/user/**")
                 .access("hasRole('ROLE_USER') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")
