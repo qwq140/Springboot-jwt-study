@@ -4,6 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.cos.jwt.config.auth.PrincipalDetails;
 import com.cos.jwt.model.User;
+import com.cos.jwt.util.CookieUtil;
+import com.cos.jwt.util.JwtUtil;
+import com.cos.jwt.util.RedisUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
@@ -23,11 +27,17 @@ import java.util.Date;
 // 스프링 시큐리티에서 UsernamePasswordAuthenticationFilter가 있음.
 // /login 요청해서 username, password 전송하면 (post)
 // UsernamePasswordAuthenticationFilter 동작을 함.
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
+    private final RedisUtil redisUtil;
     private final AuthenticationManager authenticationManager;
 
+    public JwtAuthenticationFilter(AuthenticationManager authenticationManager, RedisUtil redisUtil) {
+        this.redisUtil = redisUtil;
+        this.authenticationManager=authenticationManager;
+    }
+
+    // /login 요청을 하면 로그인 시도를 위해서 실행되는 함수
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         System.out.println("JwtAuthenticationFilter : 로그인 시도중");
@@ -71,16 +81,13 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         System.out.println("successfulAuthentication 실행됨 : 인증이 완료되었다는 의미");
         PrincipalDetails principalDetails =(PrincipalDetails)authResult.getPrincipal();
 
-        // RSA 방식이 아닌 Hash암호방식
-        // HMAC512는 서버만의 시크릿값이 필요
-        String jwtToken = JWT.create()
-                .withSubject("cos토큰")
-                .withExpiresAt(new Date(System.currentTimeMillis()+JwtProperties.EXPIATION_TIME)) // 토큰 만료시간
-                .withClaim("id", principalDetails.getUser().getId())
-                .withClaim("username", principalDetails.getUser().getUsername())
-                .sign(Algorithm.HMAC512(JwtProperties.SECRET));
+        String jwtToken = JwtUtil.generateToken(principalDetails.getUser());
+        String refreshToken = JwtUtil.generateRefreshToken(principalDetails.getUser());
+        Cookie cookie = CookieUtil.createCookie(JwtProperties.REFRESH_TOKEN_NAME,refreshToken);
+        redisUtil.setDataExpire(refreshToken, principalDetails.getUsername(), JwtProperties.REFRESH_TOKEN_EXPIRE_TIME);
 
         response.addHeader(JwtProperties.HEADER_STRING, JwtProperties.TOKEN_PREFIX+jwtToken);
+        response.addCookie(cookie);
 
     }
 }

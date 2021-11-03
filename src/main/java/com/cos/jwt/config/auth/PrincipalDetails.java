@@ -7,6 +7,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 public class PrincipalDetails implements UserDetails {
@@ -19,11 +21,12 @@ public class PrincipalDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Collection<GrantedAuthority> authorities = new ArrayList<>();
-        user.getRoleList().forEach(r->{
-            authorities.add(()->r);
+        Collection<GrantedAuthority> collector = new ArrayList<>();
+        List<String> roles = user.getRoles().stream().map(r->"ROLE_"+r.toString()).collect(Collectors.toList());
+        roles.forEach(r->{
+            collector.add(()->r);
         });
-        return authorities;
+        return collector;
     }
 
     @Override

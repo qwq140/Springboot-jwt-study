@@ -5,6 +5,7 @@ import com.cos.jwt.config.jwt.JwtAuthorizationFilter;
 import com.cos.jwt.filter.MyFilter1;
 import com.cos.jwt.filter.MyFilter3;
 import com.cos.jwt.model.UserRepository;
+import com.cos.jwt.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final CorsFilter corsFilter;
     private final UserRepository userRepository;
+    private final RedisUtil redisUtil;
 
     @Bean
     public BCryptPasswordEncoder encode(){
@@ -39,8 +41,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .addFilter(corsFilter) // @CrossOrigin은 인증이 필요하지 않은 경우에 사용, 인증이 필요한 경우에는 시큐리티 필터에 등록
                 .formLogin().disable() // 폼태그를 이용한 로그인을 사용하지 않음
                 .httpBasic().disable() // Basic 방식 : Authorization에 ID,PW를 담는 방식, Bearer 방식 : Authorization에 token을 담는 방식
-                .addFilter(new JwtAuthenticationFilter(authenticationManager())) // AuthenticationManager
-                .addFilter(new JwtAuthorizationFilter(authenticationManager(),userRepository))
+                .addFilter(new JwtAuthenticationFilter(authenticationManager(), redisUtil)) // AuthenticationManager
+                .addFilter(new JwtAuthorizationFilter(authenticationManager(),userRepository, redisUtil))
                 .authorizeRequests()
                 .antMatchers("/api/v1/user/**")
                 .access("hasRole('ROLE_USER') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")
